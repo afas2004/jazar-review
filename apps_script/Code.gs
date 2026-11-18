@@ -24,7 +24,8 @@ function doPost(e) {
     const sh = ss.getSheetByName(SHEET) || ss.insertSheet(SHEET);
     if (sh.getLastRow() === 0) { sh.appendRow(HEADER); sh.setFrozenRows(1); }
     const now = new Date();
-    const rows = items.map(it => [now, clip(it.t, 40), reviewer, clip(body.device, 20), clip(it.k, 30), clip(it.id, 12),
+    // a leading ' keeps text as text: Sheets would read the key "1991-1" and the time as dates
+    const rows = items.map(it => [now, "'" + clip(it.t, 40), reviewer, clip(body.device, 20), "'" + clip(it.k, 30), clip(it.id, 12),
       clip(it.word, 60), clip(it.n, 4), clip(it.ms, 120), ANSWERS[clip(it.a, 2)] || '', clip(it.fix, 300),
       clip(it.phrase, 4), clip(it.remark, 1000)]);
     sh.getRange(sh.getLastRow() + 1, 1, rows.length, HEADER.length).setValues(rows);
@@ -47,8 +48,10 @@ function doGet(e) {
   if (sh && sh.getLastRow() > 1) {
     const rows = sh.getRange(2, 1, sh.getLastRow() - 1, HEADER.length).getValues();
     for (const r of rows) {                       // rows are in arrival order: a later row replaces an earlier one
-      if (String(r[2]).trim().toLowerCase() !== who || !r[4]) continue;
-      answers[r[4]] = { t: r[1] instanceof Date ? r[1].toISOString() : String(r[1]), a: CODES[r[9]] || '', fix: String(r[10] || ''), phrase: r[11] === 'ya',
+      if (String(r[2]).trim().toLowerCase() !== who || String(r[5]) === '') continue;
+      // the key is rebuilt from lemma_id and meaning: older rows had their key turned into a date by Sheets
+      const k = String(r[7]) === '' ? 'w-' + r[5] : r[5] + '-' + r[7];
+      answers[k] = { t: r[1] instanceof Date ? r[1].toISOString() : String(r[1]), a: CODES[r[9]] || '', fix: String(r[10] || ''), phrase: r[11] === 'ya',
                         remark: String(r[12] || '') };
     }
   }
