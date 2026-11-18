@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Jazar Semakan Makna</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* One word per screen on a phone, a plain list on a laptop. Answers are kept on the device and sent to the coordinator's Google Sheet. */
+:root {
+  --paper: #f3f5f7; --surface: #ffffff; --ink: #16202e; --muted: #5b6676; --line: #d8dee6;
+  --accent: #1f4f8f; --ok: #1d6b45; --ok-soft: #dcefe4; --no: #a3352b; --no-soft: #f6e0dd; --unsure: #5b6676; --unsure-soft: #eceef1;
+  --warn: #8a5a12; --warn-soft: #f7ecd9;
+  --font-ui: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+  --font-ar: "Noto Naskh Arabic", "Amiri", "Traditional Arabic", serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0d1218; --surface: #151c25; --ink: #e4e9f0; --muted: #9aa6b6; --line: #2a3442; --accent: #8db4ef;
+    --ok: #7fd1a3; --ok-soft: #173326; --no: #f19a90; --no-soft: #3a1d1a; --unsure: #a3abb7; --unsure-soft: #252d38;
+    --warn: #e6b46a; --warn-soft: #3a2c15; color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--paper); color: var(--ink); font: 16px/1.5 var(--font-ui); padding-bottom: env(safe-area-inset-bottom, 0px); }
+[hidden] { display: none !important; }
+.gut { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+header { background: var(--surface); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 10; padding-top: env(safe-area-inset-top, 0px); }
+header .gut { max-width: 900px; margin: 0 auto; padding-block: 12px; display: flex; align-items: center; gap: 12px; }
+.who { border: 0; background: transparent; font-weight: 600; padding: 0; text-align: left; margin-right: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.count { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.saved { font-size: 13px; color: var(--ok); min-width: 70px; text-align: right; }
+.bar { height: 4px; background: var(--line); }
+.bar i { display: block; height: 100%; width: 0; background: var(--ok); transition: width .3s; }
+.alert { background: var(--warn-soft); color: var(--warn); font-size: 14px; }
+.alert .gut { max-width: 900px; margin: 0 auto; padding-block: 8px; }
+
+main .gut { max-width: 900px; margin: 0 auto; padding-block: 20px 40px; }
+.loading { text-align: center; color: var(--muted); padding: 60px 0; }
+
+.q { max-width: 520px; margin: 0 auto; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 28px 20px 22px; display: grid; gap: 18px; text-align: center; }
+.q .ar { font: 700 48px/1.5 var(--font-ar); direction: rtl; }
+.q .ask { font-size: 15px; color: var(--muted); }
+.mean { display: grid; gap: 12px; padding-top: 16px; border-top: 1px solid var(--line); }
+.mean.solo { border-top: 0; padding-top: 0; }
+.mlabel { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.ms { font-size: 26px; font-weight: 700; line-height: 1.25; }
+.also { font-size: 15px; color: var(--muted); margin-top: -8px; }
+.answers { display: grid; gap: 10px; }
+.answers button { min-height: 56px; border-radius: 12px; border: 2px solid var(--line); background: var(--surface); font-size: 18px; font-weight: 700; }
+.answers .y[aria-pressed="true"] { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); }
+.answers .n[aria-pressed="true"] { background: var(--no-soft); border-color: var(--no); color: var(--no); }
+.answers .u[aria-pressed="true"] { background: var(--unsure-soft); border-color: var(--unsure); color: var(--unsure); }
+.fix { display: grid; gap: 8px; text-align: left; }
+.fix label { font-size: 14px; font-weight: 600; }
+.fix input { border: 2px solid var(--line); border-radius: 12px; padding: 12px; font-size: 16px; background: var(--surface); }
+.phrase { font-size: 14px; color: var(--muted); display: flex; gap: 8px; align-items: center; justify-content: center; }
+.phrase input { width: 20px; height: 20px; }
+.remark { display: grid; gap: 6px; text-align: left; padding-top: 14px; border-top: 1px solid var(--line); }
+.remark label { font-size: 14px; font-weight: 600; color: var(--muted); }
+.remark textarea { border: 2px solid var(--line); border-radius: 12px; padding: 10px 12px; font: 15px/1.4 var(--font-ui); background: var(--surface); resize: vertical; }
+.nav { max-width: 520px; margin: 14px auto 0; display: flex; justify-content: space-between; gap: 10px; }
+.nav button { min-height: 48px; padding: 0 18px; border-radius: 12px; border: 2px solid var(--line); background: var(--surface); font-weight: 600; }
+.nav button:disabled { opacity: .4; cursor: default; }
+.nav .next { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+
+.list { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.item { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 16px; align-items: start; padding: 14px 18px; border-top: 1px solid var(--line); }
+.item:first-child { border-top: 0; }
+.item .ar { font: 700 28px/1.4 var(--font-ar); direction: rtl; text-align: right; }
+.imeans { display: grid; }
+.irow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 16px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+.irow:first-child { border-top: 0; padding-top: 0; }
+.irow .mlabel, .irow .ms, .irow .also { grid-column: 1; }
+.irow .ms { font-size: 18px; }
+.irow .also { margin-top: 0; font-size: 14px; }
+.irow .answers { grid-column: 2; grid-row: 1 / span 3; grid-template-columns: repeat(3, auto); gap: 6px; }
+.irow .answers button { min-height: 42px; font-size: 15px; padding: 0 14px; }
+.irow .fix, .irow .phrase { grid-column: 1 / -1; justify-content: flex-start; }
+.irow .fix input { padding: 8px 10px; }
+.imeans .remark { padding-top: 8px; }
+.pager { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pager button { min-height: 44px; padding: 0 16px; border-radius: 12px; border: 2px solid var(--line); background: var(--surface); font-weight: 600; }
+.pager button:disabled { opacity: .4; cursor: default; }
+
+.done { max-width: 520px; margin: 0 auto; text-align: center; display: grid; gap: 12px; padding: 30px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
+.done h2 { margin: 0; font-size: 22px; }
+.done p { margin: 0; color: var(--muted); }
+.done button { min-height: 48px; border-radius: 12px; border: 2px solid var(--line); background: var(--surface); font-weight: 600; }
+
+.sheet { position: fixed; inset: 0; z-index: 40; background: rgba(10, 16, 24, .5); display: grid; place-items: center; padding: 16px; }
+.panel { background: var(--surface); border-radius: 16px; max-width: 460px; width: 100%; padding: 26px 22px; display: grid; gap: 14px; text-align: center; }
+.panel h2 { margin: 0; font-size: 22px; text-wrap: balance; }
+.panel p { margin: 0; color: var(--muted); }
+.panel input { border: 2px solid var(--line); border-radius: 12px; padding: 12px; font-size: 16px; background: var(--surface); text-align: center; }
+.panel .go { min-height: 54px; border-radius: 12px; border: 0; background: var(--accent); color: var(--surface); font-size: 18px; font-weight: 700; }
+.panel .ex { text-align: left; font-size: 15px; display: grid; gap: 6px; background: var(--paper); border-radius: 12px; padding: 12px 14px; }
+@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+</style>
+<script src="config.js"></script>
+</head>
+<body>
+<header><div class="gut">
+  <button class="who" id="who" type="button">Penyemak:</button>
+  <span class="count" id="count"></span>
+  <span class="saved" id="saved" aria-live="polite"></span>
+</div><div class="bar"><i id="bar"></i></div></header>
+<div class="alert" id="alert" role="status" hidden><div class="gut" id="alert-t"></div></div>
+<main><div class="gut" id="main"><p class="loading">Memuatkan perkataan…</p></div></main>
+<div class="sheet" id="sheet" hidden><div class="panel" id="panel" role="dialog" aria-modal="true" aria-labelledby="w-title"></div></div>
+
+<script>
+const SYNC_URL = (window.JAZAR_SYNC_URL || '').trim();
+const PER_PAGE = 25;
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+let WORDS = [];
+let answers = store.get('jz-answers', {});
+let queue = store.get('jz-queue', []);
+let reviewer = store.get('jz-name', '');
+let idx = store.get('jz-idx', 0);
+let page = 0, finished = false, savedTimer, sending = false, failures = 0;
+const device = store.get('jz-device', '') || (() => { const d = Math.random().toString(36).slice(2, 10); store.set('jz-device', d); return d; })();
+const $ = id => document.getElementById(id);
+const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
+const key = (w, m) => w.id + '-' + m.n;
+const isDone = (w, m) => !!(answers[key(w, m)] && answers[key(w, m)].a);
+const wordDone = w => w.m.every(m => isDone(w, m));
+const isWide = () => window.innerWidth >= 820;
+
+/* saving: on the device first, then queued for the Google Sheet */
+function flashSaved() { const s = $('saved'); s.textContent = 'Disimpan'; clearTimeout(savedTimer); savedTimer = setTimeout(() => { s.textContent = ''; }, 1800); }
+function record(k, w, m, patch) {
+  answers[k] = { ...(answers[k] || {}), ...patch };
+  store.set('jz-answers', answers);
+  const a = answers[k];
+  queue = queue.filter(e => e.k !== k);
+  queue.push({ t: new Date().toISOString(), k, id: w.id, word: w.w, n: m ? m.n : '', ms: m ? m.ms : '',
+               a: a.a || '', fix: a.fix || '', phrase: a.phrase ? 'ya' : '', remark: a.remark || '' });
+  store.set('jz-queue', queue);
+  flashSaved(); flush();
+}
+async function flush() {
+  if (!SYNC_URL || sending || !queue.length || !reviewer) return;
+  sending = true;
+  const batch = queue.slice(0, 40);
+  try {
+    const res = await fetch(SYNC_URL, { method: 'POST', body: JSON.stringify({ reviewer, device, items: batch }) });
+    const out = await res.json();
+    if (!out.ok) throw new Error(out.error || 'refused');
+    const sent = new Set(batch.map(e => e.k + e.t));
+    queue = queue.filter(e => !sent.has(e.k + e.t)); store.set('jz-queue', queue);
+    failures = 0; showAlert('');
+  } catch (e) {
+    failures++;
+    if (failures >= 2) showAlert('Jawapan belum dapat dihantar. Pastikan ada internet. Jawapan anda masih disimpan dalam peranti ini dan akan dihantar kemudian.');
+  } finally {
+    sending = false;
+    if (queue.length && failures === 0) setTimeout(flush, 300);
+    if (finished) render();
+  }
+}
+function showAlert(t) { $('alert').hidden = !t; $('alert-t').textContent = t; }
+window.addEventListener('online', () => { failures = 0; flush(); });
+setInterval(flush, 20000);
+
+/* building blocks */
+function answerBox(w, m) {
+  const box = el('div', 'answers'); const a = (answers[key(w, m)] || {}).a;
+  for (const [v, label] of [['y', 'Betul'], ['n', 'Salah'], ['u', 'Tak pasti']]) {
+    const b = el('button', v, label); b.type = 'button'; b.id = 'a-' + key(w, m) + '-' + v;
+    b.setAttribute('aria-pressed', String(a === v));
+    b.onclick = () => { record(key(w, m), w, m, { a: a === v ? '' : v }); render(); };
+    box.append(b);
+  }
+  return box;
+}
+function textSaver(input, get, put) {
+  let t; const commit = () => { const v = input.value.trim(); if ((get() || '') !== v) put(v); };
+  input.oninput = () => { clearTimeout(t); t = setTimeout(commit, 700); };
+  input.onblur = () => { clearTimeout(t); commit(); };
+}
+function meaningBlock(w, m, many, cls) {
+  const k = key(w, m); const box = el('div', cls);
+  if (many) box.append(el('div', 'mlabel', 'Makna ' + m.n));
+  box.append(el('div', 'ms', m.ms));
+  if (m.more) box.append(el('div', 'also', 'atau: ' + m.more.split(/;\s*/).join(', ')));
+  box.append(answerBox(w, m));
+  if ((answers[k] || {}).a === 'n') {
+    const f = el('div', 'fix'); const lab = el('label', null, 'Apakah makna yang betul? (jika tahu)'); lab.htmlFor = 'fix-' + k;
+    const i = el('input'); i.type = 'text'; i.id = 'fix-' + k; i.autocomplete = 'off'; i.placeholder = 'Contoh: rebus'; i.value = answers[k].fix || '';
+    textSaver(i, () => (answers[k] || {}).fix, v => record(k, w, m, { fix: v }));
+    f.append(lab, i); box.append(f);
+  }
+  const l = el('label', 'phrase'); const c = el('input'); c.type = 'checkbox'; c.id = 'ph-' + k;
+  c.checked = !!(answers[k] || {}).phrase; c.onchange = () => record(k, w, m, { phrase: c.checked });
+  l.append(c, 'Hanya betul dalam frasa tertentu'); box.append(l);
+  return box;
+}
+function remarkBox(w) {
+  const k = 'w-' + w.id; const f = el('div', 'remark');
+  const lab = el('label', null, 'Catatan untuk perkataan ini (pilihan)'); lab.htmlFor = 'rm-' + k;
+  const t = el('textarea'); t.id = 'rm-' + k; t.rows = 2; t.value = (answers[k] || {}).remark || '';
+  t.placeholder = 'Contoh: lebih biasa digunakan untuk …';
+  textSaver(t, () => (answers[k] || {}).remark, v => record(k, w, null, { remark: v }));
+  f.append(lab, t); return f;
+}
+
+/* screens */
+function header() {
+  $('who').textContent = 'Penyemak: ' + (reviewer || '–');
+  const n = WORDS.filter(wordDone).length;
+  $('count').textContent = (isWide() || finished ? n : Math.min(idx + 1, WORDS.length)) + ' / ' + WORDS.length;
+  $('bar').style.width = (WORDS.length ? 100 * n / WORDS.length : 0) + '%';
+}
+function renderOne() {
+  const w = WORDS[idx]; const many = w.m.length > 1;
+  const q = el('section', 'q');
+  q.append(el('div', 'ar', w.w), el('div', 'ask', many ? 'Perkataan ini ada ' + w.m.length + ' cadangan makna. Nilai setiap satu:' : 'Adakah maksudnya dalam bahasa Melayu:'));
+  for (const m of w.m) q.append(meaningBlock(w, m, many, many ? 'mean' : 'mean solo'));
+  q.append(remarkBox(w));
+  const nav = el('div', 'nav');
+  const p = el('button', null, '‹ Kembali'); p.type = 'button'; p.disabled = idx === 0; p.onclick = () => go(-1);
+  const nx = el('button', 'next', idx === WORDS.length - 1 ? 'Selesai' : 'Seterusnya ›'); nx.type = 'button'; nx.onclick = () => go(1);
+  nav.append(p, nx);
+  $('main').append(q, nav);
+}
+function go(d) {
+  if (idx + d >= WORDS.length) { finished = true; render(); return; }
+  idx = Math.max(0, idx + d); store.set('jz-idx', idx); render(); window.scrollTo(0, 0);
+}
+function renderList() {
+  const pages = Math.ceil(WORDS.length / PER_PAGE); page = Math.min(page, pages - 1);
+  const list = el('div', 'list');
+  for (const w of WORDS.slice(page * PER_PAGE, (page + 1) * PER_PAGE)) {
+    const it = el('div', 'item'); it.append(el('div', 'ar', w.w));
+    const ms = el('div', 'imeans');
+    for (const m of w.m) ms.append(meaningBlock(w, m, w.m.length > 1, 'irow'));
+    ms.append(remarkBox(w)); it.append(ms); list.append(it);
+  }
+  const pg = el('div', 'pager');
+  const a = el('button', null, '‹ Sebelum'); a.type = 'button'; a.disabled = page === 0; a.onclick = () => { page--; render(); window.scrollTo(0, 0); };
+  const b = el('button', null, 'Seterusnya ›'); b.type = 'button'; b.disabled = page >= pages - 1; b.onclick = () => { page++; render(); window.scrollTo(0, 0); };
+  pg.append(a, el('span', null, 'Halaman ' + (page + 1) + ' / ' + pages), b);
+  $('main').append(list, pg);
+}
+function renderDone() {
+  const d = el('section', 'done');
+  const waiting = SYNC_URL && queue.length;
+  d.append(el('h2', null, 'Terima kasih!'),
+    el('p', null, waiting ? 'Sedang menghantar jawapan anda… Sila biarkan halaman ini terbuka sebentar.' : 'Semua jawapan anda sudah disimpan dan dihantar. Anda boleh tutup halaman ini.'));
+  const back = el('button', null, 'Semak semula jawapan'); back.type = 'button';
+  back.onclick = () => { finished = false; idx = 0; store.set('jz-idx', 0); render(); };
+  d.append(back); $('main').append(d);
+}
+function render() {
+  if (!WORDS.length) return;
+  const f = document.activeElement && document.activeElement.id;
+  $('main').textContent = ''; header();
+  if (finished) renderDone(); else if (isWide()) renderList(); else renderOne();
+  if (f) { const e = $(f); if (e && (e.type === 'text' || e.tagName === 'TEXTAREA')) { e.focus(); e.setSelectionRange(e.value.length, e.value.length); } }
+}
+function welcome() {
+  const p = $('panel'); p.textContent = '';
+  const h = el('h2', null, 'Bantu kami menyemak makna perkataan'); h.id = 'w-title';
+  p.append(h, el('p', null, 'Anda akan melihat satu perkataan Arab dan cadangan maknanya dalam bahasa Melayu. Pilih jawapan anda. Anda boleh berhenti dan sambung bila-bila masa.'));
+  const ex = el('div', 'ex');
+  ex.append(el('div', null, 'Betul: maknanya tepat.'), el('div', null, 'Salah: maknanya tidak tepat. Tulis yang betul jika tahu.'));
+  const name = el('input'); name.id = 'w-name'; name.placeholder = 'Nama anda'; name.value = reviewer; name.autocomplete = 'name';
+  const go_ = el('button', 'go', 'Mula'); go_.type = 'button';
+  const start = () => {
+    if (!name.value.trim()) { name.placeholder = 'Sila tulis nama anda'; name.focus(); return; }
+    reviewer = name.value.trim(); store.set('jz-name', reviewer); $('sheet').hidden = true; render(); flush();
+  };
+  go_.onclick = start; name.onkeydown = e => { if (e.key === 'Enter') start(); };
+  p.append(ex, name, go_); $('sheet').hidden = false; name.focus();
+}
+$('who').onclick = welcome;
+let wasWide = isWide(); window.addEventListener('resize', () => { if (isWide() !== wasWide) { wasWide = isWide(); render(); } });
+let sx = null;
+$('main').addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true });
+$('main').addEventListener('touchend', e => {
+  if (sx == null || isWide() || finished || e.target.closest('input, textarea')) { sx = null; return; }
+  const dx = e.changedTouches[0].clientX - sx; sx = null;
+  if (Math.abs(dx) > 70) go(dx < 0 ? 1 : -1);
+});
+
+fetch('words.json', { cache: 'no-cache' }).then(r => r.json()).then(list => {
+  WORDS = list; idx = Math.min(idx, WORDS.length - 1); render();
+  if (!reviewer) welcome(); else flush();
+}).catch(() => { $('main').textContent = ''; $('main').append(el('p', 'loading', 'Senarai perkataan tidak dapat dimuatkan. Sila muat semula halaman.')); });
+</script>
+</body>
+</html>
