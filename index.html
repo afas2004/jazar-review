@@ -128,8 +128,9 @@ let WORDS = [];
 let answers = store.get('jz-answers', {});
 let queue = store.get('jz-queue', []);
 let reviewer = store.get('jz-name', '');
-let idx = store.get('jz-idx', 0);
-let page = 0, finished = false, savedTimer, sending = false, failures = 0;
+let idx = store.get('jz-idx', -1);             // -1: no place saved on this device yet
+let hadPlace = store.get('jz-idx', -1) >= 0 || store.get('jz-page', -1) >= 0;   // this device knew where they were
+let page = store.get('jz-page', -1), finished = false, savedTimer, sending = false, failures = 0;
 const device = store.get('jz-device', '') || (() => { const d = Math.random().toString(36).slice(2, 10); store.set('jz-device', d); return d; })();
 const $ = id => document.getElementById(id);
 const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
@@ -137,15 +138,36 @@ const key = (w, m) => w.id + '-' + m.n;
 const isDone = (w, m) => !!(answers[key(w, m)] && answers[key(w, m)].a);
 const wordDone = w => w.m.every(m => isDone(w, m));
 const isWide = () => window.innerWidth >= 820;
+const firstOpen = () => { const i = WORDS.findIndex(w => !wordDone(w)); return i < 0 ? 0 : i; };
+
+/* carrying on: answers already in the Google Sheet under this name come back, so a reviewer who changes device or
+   whose browser forgot everything starts at the first word they have not answered */
+async function restore() {
+  if (!SYNC_URL || !reviewer) return;
+  try {
+    const res = await fetch(SYNC_URL + '?reviewer=' + encodeURIComponent(reviewer));
+    const out = await res.json();
+    if (!out.ok || !out.answers) return;
+    let added = 0;
+    for (const [k, v] of Object.entries(out.answers)) {
+      const mine = answers[k];
+      if (!mine || !mine.t || (v.t && v.t > mine.t)) { answers[k] = v; added++; }
+    }
+    if (!added) return;
+    store.set('jz-answers', answers);
+    if (!hadPlace) { idx = firstOpen(); store.set('jz-idx', idx); page = Math.floor(idx / PER_PAGE); hadPlace = true; }
+    render();
+  } catch (e) {}
+}
 
 /* saving: on the device first, then queued for the Google Sheet */
 function flashSaved() { const s = $('saved'); s.textContent = 'Disimpan'; clearTimeout(savedTimer); savedTimer = setTimeout(() => { s.textContent = ''; }, 1800); }
 function record(k, w, m, patch) {
-  answers[k] = { ...(answers[k] || {}), ...patch };
+  answers[k] = { ...(answers[k] || {}), ...patch, t: new Date().toISOString() };
   store.set('jz-answers', answers);
   const a = answers[k];
   queue = queue.filter(e => e.k !== k);
-  queue.push({ t: new Date().toISOString(), k, id: w.id, word: w.w, n: m ? m.n : '', ms: m ? m.ms : '',
+  queue.push({ t: a.t, k, id: w.id, word: w.w, n: m ? m.n : '', ms: m ? m.ms : '',
                a: a.a || '', fix: a.fix || '', phrase: a.phrase ? 'ya' : '', remark: a.remark || '' });
   store.set('jz-queue', queue);
   flashSaved(); flush();
@@ -240,7 +262,9 @@ function go(d) {
   idx = Math.max(0, idx + d); store.set('jz-idx', idx); render(); window.scrollTo(0, 0);
 }
 function renderList() {
-  const pages = Math.ceil(WORDS.length / PER_PAGE); page = Math.min(page, pages - 1);
+  const pages = Math.ceil(WORDS.length / PER_PAGE);
+  if (page < 0) page = Math.floor(firstOpen() / PER_PAGE);
+  page = Math.min(page, pages - 1);
   const list = el('div', 'list');
   for (const w of WORDS.slice(page * PER_PAGE, (page + 1) * PER_PAGE)) {
     const it = el('div', 'item'); it.append(el('div', 'ar', w.w));
@@ -251,6 +275,7 @@ function renderList() {
   const pg = el('div', 'pager');
   const a = el('button', null, '‹ Sebelum'); a.type = 'button'; a.disabled = page === 0; a.onclick = () => { page--; render(); window.scrollTo(0, 0); };
   const b = el('button', null, 'Seterusnya ›'); b.type = 'button'; b.disabled = page >= pages - 1; b.onclick = () => { page++; render(); window.scrollTo(0, 0); };
+  store.set('jz-page', page);
   pg.append(a, el('span', null, 'Halaman ' + (page + 1) + ' / ' + pages), b);
   $('main').append(list, pg);
 }
@@ -273,14 +298,16 @@ function render() {
 function welcome() {
   const p = $('panel'); p.textContent = '';
   const h = el('h2', null, 'Bantu kami menyemak makna perkataan'); h.id = 'w-title';
-  p.append(h, el('p', null, 'Anda akan melihat satu perkataan Arab dan cadangan maknanya dalam bahasa Melayu. Pilih jawapan anda. Anda boleh berhenti dan sambung bila-bila masa.'));
+  p.append(h, el('p', null, 'Anda akan melihat satu perkataan Arab dan cadangan maknanya dalam bahasa Melayu. Pilih jawapan anda. Anda boleh berhenti dan sambung bila-bila masa, juga di peranti lain: tulis nama yang sama.'));
   const ex = el('div', 'ex');
   ex.append(el('div', null, 'Betul: maknanya tepat.'), el('div', null, 'Salah: maknanya tidak tepat. Tulis yang betul jika tahu.'));
-  const name = el('input'); name.id = 'w-name'; name.placeholder = 'Nama anda'; name.value = reviewer; name.autocomplete = 'name';
+  const name = el('input'); name.id = 'w-name'; name.placeholder = 'Nama penuh anda'; name.value = reviewer; name.autocomplete = 'name';
   const go_ = el('button', 'go', 'Mula'); go_.type = 'button';
   const start = () => {
     if (!name.value.trim()) { name.placeholder = 'Sila tulis nama anda'; name.focus(); return; }
+    const changed = reviewer !== name.value.trim();
     reviewer = name.value.trim(); store.set('jz-name', reviewer); $('sheet').hidden = true; render(); flush();
+    if (changed) restore();
   };
   go_.onclick = start; name.onkeydown = e => { if (e.key === 'Enter') start(); };
   p.append(ex, name, go_); $('sheet').hidden = false; name.focus();
@@ -296,8 +323,8 @@ $('main').addEventListener('touchend', e => {
 });
 
 fetch('words.json', { cache: 'no-cache' }).then(r => r.json()).then(list => {
-  WORDS = list; idx = Math.min(idx, WORDS.length - 1); render();
-  if (!reviewer) welcome(); else flush();
+  WORDS = list; idx = idx < 0 ? firstOpen() : Math.min(idx, WORDS.length - 1); render();
+  if (!reviewer) welcome(); else { flush(); restore(); }
 }).catch(() => { $('main').textContent = ''; $('main').append(el('p', 'loading', 'Senarai perkataan tidak dapat dimuatkan. Sila muat semula halaman.')); });
 </script>
 </body>

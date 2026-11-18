@@ -15,3 +15,5 @@ Review page for the Malay meanings of the Jazar Arabic–Malay dictionary, serve
 5. **Check:** open the URL in a browser; it should show `{"ok":true,"service":"jazar-review"}`.
 
 Answers then appear in the "Jawapan" tab, one row per change; the latest row per reviewer, device and key is the answer.
+
+**Carrying on:** the page remembers the reviewer's place on the device. When it opens with a name, it also asks the script (`?reviewer=<name>`) for that name's answers in the Sheet, so a reviewer on another device, or whose browser cleared its storage, starts at the first word they have not answered. Reviewers must type the same name each time. After changing `Code.gs`, redeploy with Deploy > Manage deployments > Edit > New version, which keeps the same URL.

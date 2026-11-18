@@ -36,7 +36,24 @@ function doPost(e) {
   }
 }
 
-function doGet() { return reply({ ok: true, service: 'jazar-review' }); }
+// GET ?reviewer=<name>: that reviewer's latest answers, so the page can carry on where they stopped (another device,
+// or after the browser cleared its storage). Without a name: a health check.
+const CODES = { 'Betul': 'y', 'Salah': 'n', 'Tak pasti': 'u' };
+function doGet(e) {
+  const who = clip(e && e.parameter && e.parameter.reviewer, 80).trim().toLowerCase();
+  if (!who) return reply({ ok: true, service: 'jazar-review' });
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET);
+  const answers = {};
+  if (sh && sh.getLastRow() > 1) {
+    const rows = sh.getRange(2, 1, sh.getLastRow() - 1, HEADER.length).getValues();
+    for (const r of rows) {                       // rows are in arrival order: a later row replaces an earlier one
+      if (String(r[2]).trim().toLowerCase() !== who || !r[4]) continue;
+      answers[r[4]] = { t: r[1] instanceof Date ? r[1].toISOString() : String(r[1]), a: CODES[r[9]] || '', fix: String(r[10] || ''), phrase: r[11] === 'ya',
+                        remark: String(r[12] || '') };
+    }
+  }
+  return reply({ ok: true, answers: answers });
+}
 
 function reply(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
