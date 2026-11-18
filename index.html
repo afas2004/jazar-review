@@ -145,7 +145,7 @@ const firstOpen = () => { const i = WORDS.findIndex(w => !wordDone(w)); return i
 async function restore() {
   if (!SYNC_URL || !reviewer) return;
   try {
-    const res = await fetch(SYNC_URL + '?reviewer=' + encodeURIComponent(reviewer));
+    const res = await fetch(SYNC_URL + '?reviewer=' + encodeURIComponent(reviewer), { cache: 'no-store' });
     const out = await res.json();
     if (!out.ok || !out.answers) return;
     let added = 0;
